@@ -1,0 +1,119 @@
+{% extends "network/layout.html" %}
+{% load static %}
+
+{% block body %}
+    
+
+    <h1>Following</h1>
+
+    
+    {% for post in page_obj %}
+        <div data-user="{{post.user}}" class="username">{{post.user}}:</div>
+        <div> {{post.postcontent}}</div>
+        <div> [{{post.timestamp}}]</div>
+        <div> Likes: <b id="likecount{{post.id}}">{{post.likecount}}</b></div>
+        <button class="like-btn" data-id="{{post.id}}" id="like{{post.id}}">Like</button>
+        <button style = "display:none;" class="unlike-btn" data-id="{{post.id}}" id="unlike{{post.id}}">Unlike</button>
+        <br>
+    {% endfor %}
+    <div class="pagination">
+  {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+  {% endif %}
+
+  <div>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+
+  {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">Next</a>
+  {% endif %}
+</div>
+
+
+    
+    
+    
+{% endblock %}
+
+{% block script %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const csrftoken = getCookie('csrftoken');
+    document.querySelectorAll('.like-btn').forEach(likeBtn => {
+        const postId = likeBtn.dataset.id;
+        const unlikeBtn = document.querySelector(`#unlike${postId}`);
+        const state = localStorage.getItem(`likeState-${postId}`);
+        
+        if (state === 'false') {
+            likeBtn.style.display = 'none';
+            unlikeBtn.style.display = 'block';
+        } else {
+            likeBtn.style.display = 'block';
+            unlikeBtn.style.display = 'none';
+        }
+    });
+    document.addEventListener('click', event => {
+        const element = event.target;
+        const postId = element.dataset.id;
+        if (element.className === 'like-btn') {
+            like(postId);
+            element.style.display = 'none';
+            document.querySelector(`#unlike${postId}`).style.display = 'block';
+            localStorage.setItem(`likeState-${postId}`, 'false');
+        }
+        else if (element.className === 'unlike-btn') {
+            unlike(postId);
+            element.style.display = 'none';
+            document.querySelector(`#like${postId}`).style.display = 'block';
+            localStorage.setItem(`likeState-${postId}`, 'true');
+        }
+        else if (element.className === 'username'){
+        window.location.href = `/user/${element.dataset.user}`;
+        }
+    })
+    function like(postId, buttonElement) {
+  
+    let likecount = parseInt(document.querySelector(`#likecount${postId}`).innerHTML)
+    fetch(`/posts/${postId}`, {
+        method: 'PUT',
+        headers: {'X-CSRFToken': csrftoken},
+        mode: 'same-origin',
+        body: JSON.stringify({ likecount: true })
+    })
+    .then(()=>{
+        document.querySelector(`#likecount${postId}`).innerHTML = likecount+1
+    })
+    
+}
+
+    function unlike(postId, buttonElement) {
+    let likecount = parseInt(document.querySelector(`#likecount${postId}`).innerHTML)
+    fetch(`/posts/${postId}`, {
+        method: 'PUT',
+        headers: {'X-CSRFToken': csrftoken},
+        mode: 'same-origin',
+        body: JSON.stringify({ likecount: false })
+    })
+    .then(()=>{
+        document.querySelector(`#likecount${postId}`).innerHTML = likecount-1
+    })
+}
+function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+})
+
+</script>
+{% endblock %}
+
